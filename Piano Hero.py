@@ -295,10 +295,12 @@ clock = pygame.time.Clock()
 
 text = ""
 
+_DEBUG = True;
 
 try:
     #=======DEBUG FOR NO KEYBOARD
-    #inp = pygame.midi.Input(1)
+    if not _DEBUG:
+        inp = pygame.midi.Input(1)
     print ("midi input made")
 
 except pygame.midi.MidiException:
@@ -344,14 +346,18 @@ while True:
             pygame.quit()
             sys.exit()   
     
-    text=""
-    midi_value = 0
+    text=""   
 
     #=======DEBUG FOR NO KEYBOARD
-    midi_value = 94     #debug
+    if(_DEBUG):
+        midi_value = 50     #debug
+        lastPlayedMidi_value = 50
     #36-95
-    #if inp.poll():
-    if False:
+    #If _DEBUG is enabled, inp is undefined.
+    #This is okay because "not _DEBUG" will be false and if statment quit
+    #before reading the "and inp.poll()"
+    if not _DEBUG and inp.poll():
+    #if False:
         midi_values = inp.read(1000)   
         midi_value = midi_values[0][0][1]
         screen.fill(BLACK)
@@ -374,19 +380,20 @@ while True:
     screen.blit(keys,(0,200))
     
     #=======DEBUG NO KEYBOARD:
-    #if(keyOn)
-    if not keyOn:
-        #midi_value = lastPlayedMidi_value
+    if(keyOn) or _DEBUG:
+    #if not keyOn:
+        midi_value = lastPlayedMidi_value
         DrawPressedKey(36,0,203,midi_value,screen)
         text =  str(midi_value) + " " + str(number_to_note(midi_value))
         textsurface = myfont.render(text, False, WHITE)
         screen.blit(textsurface,(300,400))
         #=======DEBUG NO KEYBOARD:
-        #if time.time() - 0.3 > timer:
-        if False:
-            timer = 0
-            keyOn = False
-    
+
+        if not _DEBUG and time.time() - 0.3 > timer:
+        #if False:
+                timer = 0
+                keyOn = False
+        
     
     
     pygame.display.flip()
