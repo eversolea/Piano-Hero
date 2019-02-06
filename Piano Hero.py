@@ -288,7 +288,7 @@ def getHighlightData(keyPlayed, xPos, yPos):
 
 myfont = pygame.font.SysFont('Comic Sans MS', 25)
 
-(width, height) = (1300, 700)
+(width, height) = (1000, 800)
 screen = pygame.display.set_mode((width, height))
 
 clock = pygame.time.Clock()
@@ -338,6 +338,17 @@ except Exception as exception:
 keyOn = False
 timer = 0
 lastPlayedMidi_value = 0
+
+#Setting up the rhyhm event 
+bpm = 164
+beatInMs = (60/164)*1000
+#Making my own custom Event 
+#Using (pygame.USEREVENT+1) because it is a value between USEREVENT and NUMEVENTS
+RHYTHM_EVENT = pygame.USEREVENT+1
+pygame.time.set_timer(RHYTHM_EVENT, int(beatInMs))
+
+#DEBUG TO SEE IF BEATS WORK
+beats = 0
 while True:
     clock.tick(60)  
     
@@ -345,9 +356,15 @@ while True:
         if evt.type == pygame.QUIT:
             pygame.quit()
             sys.exit()   
+        if evt.type == RHYTHM_EVENT: # is called every 'beatInMs' milliseconds
+            beats = beats + 1
+            #----TODO:
+            #Make this add a line to a downards scrolling canvas above the piano
+            
+
     
     text=""   
-
+    
     #=======DEBUG FOR NO KEYBOARD
     if(_DEBUG):
         midi_value = 50     #debug
@@ -373,20 +390,20 @@ while True:
             #print(midi_values)
             
 
-    textsurface = myfont.render("PIANO HERO", False, WHITE)
-    screen.blit(textsurface,(0  ,400))
+    textsurface = myfont.render("PIANO HERO " + str(beats), False, WHITE)
+    screen.blit(textsurface,(50 ,700))
 
     keys = pygame.image.load("AlethaKeyboard.png")
-    screen.blit(keys,(0,200))
+    screen.blit(keys,(50,500))
     
     #=======DEBUG NO KEYBOARD:
     if(keyOn) or _DEBUG:
     #if not keyOn:
         midi_value = lastPlayedMidi_value
-        DrawPressedKey(36,0,203,midi_value,screen)
+        DrawPressedKey(36,50,503,midi_value,screen)
         text =  str(midi_value) + " " + str(number_to_note(midi_value))
         textsurface = myfont.render(text, False, WHITE)
-        screen.blit(textsurface,(300,400))
+        screen.blit(textsurface,(550,700))
         #=======DEBUG NO KEYBOARD:
 
         if not _DEBUG and time.time() - 0.3 > timer:
