@@ -339,26 +339,64 @@ keyOn = False
 timer = 0
 lastPlayedMidi_value = 0
 
-#Setting up the rhyhm event 
-bpm = 164
-beatInMs = (60/164)*1000
+#Setting up the rhythm event 
+bpm = 34.5
+beatInMs = (60/bpm)*1000
 #Making my own custom Event 
 #Using (pygame.USEREVENT+1) because it is a value between USEREVENT and NUMEVENTS
 RHYTHM_EVENT = pygame.USEREVENT+1
 pygame.time.set_timer(RHYTHM_EVENT, int(beatInMs))
 
-#DEBUG TO SEE IF BEATS WORK
+#An event to time the scrolling beat bar
+SCROLL_RHYTHM_EVENT = pygame.USEREVENT+2
+pygame.time.set_timer(SCROLL_RHYTHM_EVENT, int(beatInMs/128))
+
+#DEBUG TO SEE IF IT WORK
 beats = 0
+
+
+#Try this for some size: music
+pygame.mixer.music.load('whatFaithCanDoSlow.mp3') #original bpm: 138
+pygame.mixer.music.play(0)
+ 
+beatBarScroll1 = 0
+beatBarScroll2 = -128
+beatBarScroll3 = -256
+beatBarScroll4 = -384
+beatBarScroll5 = -512
+
+
 while True:
+    
     clock.tick(60)  
     
+    screen.fill(BLACK) #Just added this 2/18 beats 
     for evt in pygame.event.get():
         if evt.type == pygame.QUIT:
             pygame.quit()
-            sys.exit()   
+            sys.exit()
         if evt.type == RHYTHM_EVENT: # is called every 'beatInMs' milliseconds
             beats = beats + 1
+        if evt.type == SCROLL_RHYTHM_EVENT:
+            if (beatBarScroll1 == 640):
+                beatBarScroll1 = 0
+            if (beatBarScroll2 == 640):
+                beatBarScroll2 = 0
+            if (beatBarScroll3 == 640):
+                beatBarScroll3 = 0
+            if (beatBarScroll4 == 640):
+                beatBarScroll4 = 0
+            if (beatBarScroll5 == 640):
+                beatBarScroll5 = 0
+            beatBarScroll1 = beatBarScroll1 + 1
+            beatBarScroll2 = beatBarScroll2 + 1
+            beatBarScroll3 = beatBarScroll3 + 1
+            beatBarScroll4 = beatBarScroll4 + 1
+            beatBarScroll5 = beatBarScroll5 + 1
+            
             #----TODO:
+            #(50 ,200))
+            
             #Make this add a line to a downards scrolling canvas above the piano
             
 
@@ -389,9 +427,17 @@ while True:
             #print(str(midi_values[0][0][1]) + " " + str(midi_values[0][0][2]))
             #print(midi_values)
             
+    
+    pygame.draw.line(screen,WHITE,(40,beatBarScroll1),(950,beatBarScroll1), 3)     
+    pygame.draw.line(screen,WHITE,(40,beatBarScroll2),(950,beatBarScroll2), 3) 
+    pygame.draw.line(screen,WHITE,(40,beatBarScroll3),(950,beatBarScroll3), 3) 
+    pygame.draw.line(screen,WHITE,(40,beatBarScroll4),(950,beatBarScroll4), 3) 
+    pygame.draw.line(screen,WHITE,(40,beatBarScroll5),(950,beatBarScroll5), 3) 
 
-    textsurface = myfont.render("PIANO HERO " + str(beats), False, WHITE)
-    screen.blit(textsurface,(50 ,700))
+    title = myfont.render("PIANO HERO ", False, WHITE)
+    screen.blit(title,(50 ,700))
+
+    
 
     keys = pygame.image.load("AlethaKeyboard.png")
     screen.blit(keys,(50,500))
@@ -412,7 +458,12 @@ while True:
                 keyOn = False
         
     
+    #Beats and scrolling work
+    debug = myfont.render(str(beatBarScroll1), False, WHITE)
+    screen.blit(debug,(50 ,200))
     
+    
+                     
     pygame.display.flip()
     
 
