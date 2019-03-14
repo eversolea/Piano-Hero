@@ -35,6 +35,42 @@ def print_device_info():
         return ("%2i: interface: %s, name: %s, opened: %s %s" %
                (i, interf, name, opened, in_out))
 
+#|====Class====
+#|---------------------
+#| Notes
+#|---------------------
+#This class holds all the data and functions required by one note
+#VARAIBLES:
+# -midiValue = The note on the keyboard (in MIDI Notation) 
+# -noteDuration = How long the note will last
+#                  - 1 = whole note
+#                  - 2 = half note
+#                  - 4 = quarter note
+#                  - 8 = eigth note
+# -measureNumber = What Measure Number (in the song) this note comes on
+# -beatInMeasure = What Beat in the Measure the note comes on
+#                  - 1 = First beat
+#                  -1.5, 2, 2.5, 3, 3.5
+#                  - 4 = Last beat
+#                  -4.5
+class Notes:
+    def __init__(self, midiValue, noteDuration, measureNumber, beatInMeasure):
+        self.midiValue = midiValue
+        self.noteDuration = noteDuration
+        self.measureNumber = measureNumber
+        self.beatInMeasure = beatInMeasure
+        self.xPos = 50 #Where xStart is (TODO: make it a #define if an xStart change wanted)
+        self.yPos = 0
+        key = getHighlightData(self.midiValue, self.xPos, self.yPos)
+        self.xPos = key[0]
+        self.yPos = key[1]
+    def print(self, surface):
+        #TODO: change falling note shape (see DrawPressedKey)
+        pygame.draw.polygon(surface, GREEN, ((self.xPos,self.yPos),(self.xPos,self.yPos+99),(self.xPos+12,self.yPos+99),(self.xPos+12,self.yPos)))
+        pygame.draw.polygon(surface, LIGHTRED, ((self.xPos,self.yPos),(self.xPos,self.yPos+99),(self.xPos+12,self.yPos+99),(self.xPos+12,self.yPos)),2)
+    def fall(self):
+        self.yPos = self.yPos + 1
+
 
 #|=========================
 #|DrawPressedKey
@@ -84,6 +120,17 @@ def number_to_note(number):
     notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
     return notes[number%12]
 
+#|=========================
+#|getHighlightData
+#|=========================
+#This function returns the coordinates to highlight the key played on the keyboard by the user 
+#PARAMETERS:
+# -keyPlayed = The key played on the keyboard (in MIDI Notation) 
+# -xPos = The orign x-coordinate from which you want to draw the highlighted key
+# -yPos = The orign y-coordinate from which you want to draw the highlighted key
+#RETURNS:
+# -(xPos, yPos, keyType) Tuple = A tuple with the new (x,y) coordinate. 
+#                                Also the keyType the user played
 def getHighlightData(keyPlayed, xPos, yPos):
     keyType = 0
     
@@ -335,6 +382,28 @@ except Exception as exception:
                 pygame.quit()
                 sys.exit() 
     
+#MIDI INPUT IS MADE
+#START THE PIANO HERO MODULE
+                
+#SONG DATA TYPE
+with open('whatFaithCanDo.txt') as f:
+    whatFaithCanDo = [tuple(map(float, i.split(','))) for i in f]
+    print(whatFaithCanDo)
+    
+    
+my_list_of_notes = []
+
+#THE REAL THING
+for i in range(len(whatFaithCanDo)):
+    tempClass = Notes(whatFaithCanDo[i][0], whatFaithCanDo[i][1], whatFaithCanDo[i][2], whatFaithCanDo[i][3])
+    my_list_of_notes.append(tempClass)    
+ 
+#DEBUG
+#tempClass = Notes(whatFaithCanDo[0][0], whatFaithCanDo[0][1], whatFaithCanDo[0][2])
+#my_list_of_notes.append(tempClass)
+   
+
+
 keyOn = False
 timer = 0
 lastPlayedMidi_value = 0
@@ -347,9 +416,14 @@ beatInMs = (60/bpm)*1000
 RHYTHM_EVENT = pygame.USEREVENT+1
 pygame.time.set_timer(RHYTHM_EVENT, int(beatInMs))
 
+#An event to time eigth notes
+EIGHTH_NOTE_RHYTHM_EVENT = pygame.USEREVENT+2
+pygame.time.set_timer(EIGHTH_NOTE_RHYTHM_EVENT, int(beatInMs/8))
+
 #An event to time the scrolling beat bar
-SCROLL_RHYTHM_EVENT = pygame.USEREVENT+2
+SCROLL_RHYTHM_EVENT = pygame.USEREVENT+3
 pygame.time.set_timer(SCROLL_RHYTHM_EVENT, int(beatInMs/128))
+
 
 #DEBUG TO SEE IF IT WORK
 beats = 0
@@ -359,12 +433,13 @@ beats = 0
 pygame.mixer.music.load('whatFaithCanDoSlow.mp3') #original bpm: 138
 pygame.mixer.music.play(0)
  
+#First Beat will find the # of pygame units it takes for a beat to happen so 
+#it can time the Beat Bars to the beat.
+unitsPerBeat = 128
 beatBarScroll1 = 0
+firstBeat = True
 beatBarScroll2 = -128
-beatBarScroll3 = -256
-beatBarScroll4 = -384
-beatBarScroll5 = -512
-
+beatBarScroll3 = -128
 
 while True:
     
@@ -377,36 +452,43 @@ while True:
             sys.exit()
         if evt.type == RHYTHM_EVENT: # is called every 'beatInMs' milliseconds
             beats = beats + 1
-        if evt.type == SCROLL_RHYTHM_EVENT:
-            if (beatBarScroll1 == 640):
-                beatBarScroll1 = 0
-            if (beatBarScroll2 == 640):
+            
+            #Time the Beat Bars to the Beat (using unitsPerBeat)
+            if(firstBeat):
+                unitsPerBeat = beatBarScroll1
                 beatBarScroll2 = 0
-            if (beatBarScroll3 == 640):
+                beatBarScroll3 = unitsPerBeat * -1
+                firstBeat = False
+                
+                
+        if evt.type == EIGHTH_NOTE_RHYTHM_EVENT:
+            beatBarScroll4 = 0
+        
+        if evt.type == SCROLL_RHYTHM_EVENT:
+            if (beatBarScroll1 == 500):
+                beatBarScroll1 = 0
+            if (beatBarScroll2 == 500):
+                beatBarScroll2 = 0
+            if (beatBarScroll3 == 500):
                 beatBarScroll3 = 0
-            if (beatBarScroll4 == 640):
-                beatBarScroll4 = 0
-            if (beatBarScroll5 == 640):
-                beatBarScroll5 = 0
             beatBarScroll1 = beatBarScroll1 + 1
             beatBarScroll2 = beatBarScroll2 + 1
             beatBarScroll3 = beatBarScroll3 + 1
-            beatBarScroll4 = beatBarScroll4 + 1
-            beatBarScroll5 = beatBarScroll5 + 1
-            
+
             #----TODO:
             #(50 ,200))
             
             #Make this add a line to a downards scrolling canvas above the piano
-            
+            for i in range(len(my_list_of_notes)):
+                my_list_of_notes[i].fall()
 
     
     text=""   
     
     #=======DEBUG FOR NO KEYBOARD
     if(_DEBUG):
-        midi_value = 50     #debug
-        lastPlayedMidi_value = 50
+        midi_value = 69     #debug
+        lastPlayedMidi_value = 69
     #36-95
     #If _DEBUG is enabled, inp is undefined.
     #This is okay because "not _DEBUG" will be false and if statment quit
@@ -431,8 +513,9 @@ while True:
     pygame.draw.line(screen,WHITE,(40,beatBarScroll1),(950,beatBarScroll1), 3)     
     pygame.draw.line(screen,WHITE,(40,beatBarScroll2),(950,beatBarScroll2), 3) 
     pygame.draw.line(screen,WHITE,(40,beatBarScroll3),(950,beatBarScroll3), 3) 
-    pygame.draw.line(screen,WHITE,(40,beatBarScroll4),(950,beatBarScroll4), 3) 
-    pygame.draw.line(screen,WHITE,(40,beatBarScroll5),(950,beatBarScroll5), 3) 
+
+    for i in range(len(my_list_of_notes)):
+        my_list_of_notes[i].print(screen)
 
     title = myfont.render("PIANO HERO ", False, WHITE)
     screen.blit(title,(50 ,700))
@@ -459,7 +542,7 @@ while True:
         
     
     #Beats and scrolling work
-    debug = myfont.render(str(beatBarScroll1), False, WHITE)
+    debug = myfont.render(str(beats), False, WHITE)
     screen.blit(debug,(50 ,200))
     
     
