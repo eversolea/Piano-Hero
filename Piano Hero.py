@@ -64,10 +64,22 @@ class Notes:
         key = getHighlightData(self.midiValue, self.xPos, self.yPos)
         self.xPos = key[0]
         self.yPos = key[1]
-    def print(self, surface):
+    #We need this function because unitsPerBeat isn't found until after constructor 
+    #is already run
+    def setNoteInPosition(self, unitsPerBeat):
+        self.yPos = 0 - unitsPerBeat * (self.measureNumber + (self.beatInMeasure - 1) / 4)
+    def print(self, surface, unitsPerBeat):
         #TODO: change falling note shape (see DrawPressedKey)
-        pygame.draw.polygon(surface, GREEN, ((self.xPos,self.yPos),(self.xPos,self.yPos+99),(self.xPos+12,self.yPos+99),(self.xPos+12,self.yPos)))
-        pygame.draw.polygon(surface, LIGHTRED, ((self.xPos,self.yPos),(self.xPos,self.yPos+99),(self.xPos+12,self.yPos+99),(self.xPos+12,self.yPos)),2)
+        pygame.draw.polygon(surface, GREEN, ((self.xPos,self.yPos),(self.xPos,self.yPos - unitsPerBeat/self.noteDuration),(self.xPos+12,self.yPos - unitsPerBeat/self.noteDuration),(self.xPos+12,self.yPos)))
+        pygame.draw.polygon(surface, LIGHTRED, ((self.xPos,self.yPos),(self.xPos,self.yPos - unitsPerBeat/self.noteDuration),(self.xPos+12,self.yPos - unitsPerBeat/self.noteDuration),(self.xPos+12,self.yPos)),2)
+    def fall(self):
+        self.yPos = self.yPos + 1
+
+class measureBar:
+    def __init__(self, yPos):
+        self.yPos = yPos
+    def print(self, surface):
+        pygame.draw.line(surface,WHITE,(40,self.yPos),(950,self.yPos), 3)  
     def fall(self):
         self.yPos = self.yPos + 1
 
@@ -392,11 +404,12 @@ with open('whatFaithCanDo.txt') as f:
     
     
 my_list_of_notes = []
+my_list_of_measures = []
 
 #THE REAL THING
 for i in range(len(whatFaithCanDo)):
     tempClass = Notes(whatFaithCanDo[i][0], whatFaithCanDo[i][1], whatFaithCanDo[i][2], whatFaithCanDo[i][3])
-    my_list_of_notes.append(tempClass)    
+    my_list_of_notes.append(tempClass)
  
 #DEBUG
 #tempClass = Notes(whatFaithCanDo[0][0], whatFaithCanDo[0][1], whatFaithCanDo[0][2])
@@ -433,13 +446,13 @@ beats = 0
 pygame.mixer.music.load('whatFaithCanDoSlow.mp3') #original bpm: 138
 pygame.mixer.music.play(0)
  
-#First Beat will find the # of pygame units it takes for a beat to happen so 
-#it can time the Beat Bars to the beat.
-unitsPerBeat = 128
-beatBarScroll1 = 0
-firstBeat = True
-beatBarScroll2 = -128
-beatBarScroll3 = -128
+
+
+
+#TODO: Move unitsPerBeat calculation before Notes are created to simplify code
+#      NEED TO FIX THIS! Because yPos of notes is calculated after unitsPerBeat 
+#      is found, all notes in the song are 2 beats late!
+unitsPerBeat = 0
 
 while True:
     
@@ -452,38 +465,34 @@ while True:
             sys.exit()
         if evt.type == RHYTHM_EVENT: # is called every 'beatInMs' milliseconds
             beats = beats + 1
+          
+               
+            #Create an instance of BeatBar
+            tempClass = measureBar(0)
+            my_list_of_measures.append(tempClass)
+                
+            #Use yPos in first measureBar to find unitsPerBeat (for use in drawing notes)
+            if(beats == 2):
+                unitsPerBeat = my_list_of_measures[0].yPos
+                for i in range(len(my_list_of_notes)):
+                    my_list_of_notes[i].setNoteInPosition(unitsPerBeat)
             
-            #Time the Beat Bars to the Beat (using unitsPerBeat)
-            if(firstBeat):
-                unitsPerBeat = beatBarScroll1
-                beatBarScroll2 = 0
-                beatBarScroll3 = unitsPerBeat * -1
-                firstBeat = False
-                
-                
         if evt.type == EIGHTH_NOTE_RHYTHM_EVENT:
-            beatBarScroll4 = 0
+            placeHolder = 0
         
         if evt.type == SCROLL_RHYTHM_EVENT:
-            if (beatBarScroll1 == 500):
-                beatBarScroll1 = 0
-            if (beatBarScroll2 == 500):
-                beatBarScroll2 = 0
-            if (beatBarScroll3 == 500):
-                beatBarScroll3 = 0
-            beatBarScroll1 = beatBarScroll1 + 1
-            beatBarScroll2 = beatBarScroll2 + 1
-            beatBarScroll3 = beatBarScroll3 + 1
 
             #----TODO:
             #(50 ,200))
             
-            #Make this add a line to a downards scrolling canvas above the piano
+            #Call all of the Notes and measureBar's fall functions
             for i in range(len(my_list_of_notes)):
                 my_list_of_notes[i].fall()
+            for i in range(len(my_list_of_measures)):
+                my_list_of_measures[i].fall()
 
     
-    text=""   
+    text=""
     
     #=======DEBUG FOR NO KEYBOARD
     if(_DEBUG):
@@ -509,30 +518,34 @@ while True:
             #print(str(midi_values[0][0][1]) + " " + str(midi_values[0][0][2]))
             #print(midi_values)
             
-    
-    pygame.draw.line(screen,WHITE,(40,beatBarScroll1),(950,beatBarScroll1), 3)     
-    pygame.draw.line(screen,WHITE,(40,beatBarScroll2),(950,beatBarScroll2), 3) 
-    pygame.draw.line(screen,WHITE,(40,beatBarScroll3),(950,beatBarScroll3), 3) 
 
+    #Print all measureBars
+    for i in range(len(my_list_of_measures)):
+        my_list_of_measures[i].print(screen)
+
+    #Print all notes
     for i in range(len(my_list_of_notes)):
-        my_list_of_notes[i].print(screen)
+        my_list_of_notes[i].print(screen, unitsPerBeat)
 
     title = myfont.render("PIANO HERO ", False, WHITE)
-    screen.blit(title,(50 ,700))
-
-    
+   
 
     keys = pygame.image.load("AlethaKeyboard.png")
-    screen.blit(keys,(50,500))
+    #Nothing will be drawn until unitsPerBeat is known
+    if(unitsPerBeat != 0):
+        screen.blit(title,(50 ,unitsPerBeat*5 + 190))
+        screen.blit(keys,(50,unitsPerBeat*5 + 9))
     
     #=======DEBUG NO KEYBOARD:
     if(keyOn) or _DEBUG:
     #if not keyOn:
-        midi_value = lastPlayedMidi_value
-        DrawPressedKey(36,50,503,midi_value,screen)
-        text =  str(midi_value) + " " + str(number_to_note(midi_value))
-        textsurface = myfont.render(text, False, WHITE)
-        screen.blit(textsurface,(550,700))
+        #Nothing will be drawn until unitsPerBeat is known
+        if(unitsPerBeat != 0):
+            midi_value = lastPlayedMidi_value
+            DrawPressedKey(36,50,unitsPerBeat*5 + 12,midi_value,screen)
+            text =  str(midi_value) + " " + str(number_to_note(midi_value))
+            textsurface = myfont.render(text, False, WHITE)
+            screen.blit(textsurface,(550,unitsPerBeat*5 + 190))
         #=======DEBUG NO KEYBOARD:
 
         if not _DEBUG and time.time() - 0.3 > timer:
