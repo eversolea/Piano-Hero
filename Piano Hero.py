@@ -7,6 +7,7 @@ Created on Tue Oct 30 17:44:11 2018
 
 import pygame
 import pygame.midi
+import random
 import sys
 import time
 
@@ -343,6 +344,30 @@ def getHighlightData(keyPlayed, xPos, yPos):
 
     return (xPos, yPos, keyType)
     
+
+
+class Particle():
+    def __init__(self, startx, starty, col, pause):
+        self.x = startx
+        self.y = starty
+        self.col = col
+        self.sx = startx
+        self.sy = starty
+        self.pause = pause
+
+    def move(self):
+        if self.pause==0:
+            if self.y < 0:
+                self.x=self.sx
+                self.y=self.sy
+
+            else:
+                self.y-=1
+
+            self.x+=random.randint(-2, 2)
+
+        else:
+            self.pause-=1
     
 
 myfont = pygame.font.SysFont('Comic Sans MS', 25)
@@ -454,6 +479,19 @@ pygame.mixer.music.play(0)
 #      is found, all notes in the song are 2 beats late!
 unitsPerBeat = 0
 
+#Particle Effects Test
+#Color initialization
+white = (255, 255, 255)
+black = (0,0,0)
+grey = (128,128,128)
+
+#PARTICLE SYSTEM VARIABLES
+correctNoteReward = False #Boolean whether to display reward particle system or not
+createParticles = 0 #3-option flag to show stage of creating particles 0-not created, 1- will be created, 2 - already created
+currentNote = 0 #The current note that was played right (so the particle system will stop once the note is no longer active)
+particles = []
+
+
 while True:
     
     clock.tick(60)  
@@ -524,9 +562,16 @@ while True:
         my_list_of_measures[i].print(screen)
 
     #Print all notes
+    delay = 5 + 2 #5 beats delay for this song, 2 beats delay for song sync
     for i in range(len(my_list_of_notes)):
         my_list_of_notes[i].print(screen, unitsPerBeat)
-
+        debug = myfont.render(str(my_list_of_notes[i].measureNumber) + " " + str(beats - delay), False, WHITE)
+        if(my_list_of_notes[i].midiValue == midi_value):
+            if(my_list_of_notes[i].measureNumber == beats - delay):
+                correctNoteReward = True
+                currentNote = i
+    
+                
     title = myfont.render("PIANO HERO ", False, WHITE)
    
 
@@ -536,16 +581,57 @@ while True:
         screen.blit(title,(50 ,unitsPerBeat*5 + 190))
         screen.blit(keys,(50,unitsPerBeat*5 + 9))
     
+
+    #PARTICLE SYSTEM CONTROLLED HERE
+    if(correctNoteReward):
+        if(not my_list_of_notes[currentNote].measureNumber == beats - delay):
+            correctNoteReward = False
+            createParticles = 0
+        #Particle Effects System     
+        if(createParticles == 0):
+            createParticles = 1 
+            #Create the particles
+        else:
+            if(createParticles == 1):
+                createParticles = 2
+                #Stop Particle Creation
+            for p in particles:
+                p.move()
+                pygame.draw.circle(screen, p.col, (p.x, p.y), 2)
+                #Display the Particles
+            
+        #when timer finishes, 
+        #make correctNoteReward false
+    
     #=======DEBUG NO KEYBOARD:
     if(keyOn) or _DEBUG:
     #if not keyOn:
         #Nothing will be drawn until unitsPerBeat is known
         if(unitsPerBeat != 0):
+            
+            #Particle Effects creation must be done here to recreate particles
+            #at the right spot
+            if(createParticles == 1):
+                key = getHighlightData(midi_value, 50,unitsPerBeat*5 + 9) 
+                #Get what x-value the particle system should spawn at (based on midi Value)
+                A = 100
+                B = unitsPerBeat*5 + 9  #y-value particles spawn at
+                for part in range(1, A):
+                    if part % 2 > 0: col = white
+                    else: col = grey
+                    particles.append( Particle(key[0], B, col, round(B*part/A)) )
+                createParticles = 2
+                        
+            
             midi_value = lastPlayedMidi_value
             DrawPressedKey(36,50,unitsPerBeat*5 + 12,midi_value,screen)
             text =  str(midi_value) + " " + str(number_to_note(midi_value))
             textsurface = myfont.render(text, False, WHITE)
+            
+            
+            
             screen.blit(textsurface,(550,unitsPerBeat*5 + 190))
+            
         #=======DEBUG NO KEYBOARD:
 
         if not _DEBUG and time.time() - 0.3 > timer:
@@ -555,7 +641,7 @@ while True:
         
     
     #Beats and scrolling work
-    debug = myfont.render(str(beats), False, WHITE)
+    #debug = myfont.render(str(beats), False, WHITE)
     screen.blit(debug,(50 ,200))
     
     
