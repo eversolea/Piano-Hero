@@ -490,7 +490,7 @@ correctNoteReward = False #Boolean whether to display reward particle system or 
 createParticles = 0 #3-option flag to show stage of creating particles 0-not created, 1- will be created, 2 - already created
 currentNote = 0 #The current note that was played right (so the particle system will stop once the note is no longer active)
 particles = []
-
+points = 0
 
 while True:
     
@@ -566,7 +566,7 @@ while True:
     for i in range(len(my_list_of_notes)):
         my_list_of_notes[i].print(screen, unitsPerBeat)
         debug = myfont.render(str(my_list_of_notes[i].measureNumber) + " " + str(beats - delay), False, WHITE)
-        if(my_list_of_notes[i].midiValue == midi_value):
+        if(my_list_of_notes[i].midiValue == lastPlayedMidi_value):
             if(my_list_of_notes[i].measureNumber == beats - delay):
                 correctNoteReward = True
                 currentNote = i
@@ -584,6 +584,7 @@ while True:
 
     #PARTICLE SYSTEM CONTROLLED HERE
     if(correctNoteReward):
+        points = points + 1
         if(not my_list_of_notes[currentNote].measureNumber == beats - delay):
             correctNoteReward = False
             createParticles = 0
@@ -622,11 +623,14 @@ while True:
                     particles.append( Particle(key[0], B, col, round(B*part/A)) )
                 createParticles = 2
                         
-            
+            print(my_list_of_notes[i].measureNumber)
+            print(points)
+            print("end")
             midi_value = lastPlayedMidi_value
             DrawPressedKey(36,50,unitsPerBeat*5 + 12,midi_value,screen)
+            #text =  str(midi_value) + " " + str(number_to_note(midi_value))
             text =  str(midi_value) + " " + str(number_to_note(midi_value))
-            textsurface = myfont.render(text, False, WHITE)
+            textsurface = myfont.render(str(points), False, WHITE)
             
             
             
